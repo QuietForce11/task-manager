@@ -38,9 +38,13 @@ app.use((req, res) => {
 // ===== Global error handler =====
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  res.status(err.statusCode || 500).json({
-    error: err.message || "Something went wrong",
-  });
+  const status = err.statusCode || 500;
+  // In production, never leak raw internal error text (e.g. driver/DB errors) to the client
+  const message =
+    status === 500 && process.env.NODE_ENV === "production"
+      ? "Something went wrong"
+      : err.message || "Something went wrong";
+  res.status(status).json({ error: message });
 });
 
 const PORT = process.env.PORT || 5000;

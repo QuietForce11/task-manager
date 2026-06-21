@@ -20,13 +20,22 @@ export async function signup(req, res) {
     return res.status(409).json({ error: "Email already in use" });
   }
 
-  const user = await User.create({ name, email, password });
-  const token = signToken(user._id);
+  try {
+    const user = await User.create({ name, email, password });
+    const token = signToken(user._id);
 
-  res.status(201).json({
-    token,
-    user: { id: user._id, name: user.name, email: user.email },
-  });
+    res.status(201).json({
+      token,
+      user: { id: user._id, name: user.name, email: user.email },
+    });
+  } catch (err) {
+    // Catches the rare race condition where two signups with the same
+    // email happen at almost the same time and both pass the check above
+    if (err.code === 11000) {
+      return res.status(409).json({ error: "Email already in use" });
+    }
+    throw err; // anything else goes to the global error handler
+  }
 }
 
 export async function login(req, res) {
